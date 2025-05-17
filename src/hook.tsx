@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Store } from "./store";
-import { IndexedDbState, IndexedDbStateParams } from "./types";
+import { IndexedDbStore, IndexedDbStoreParams } from "./types";
 
-export const useIndexedDbState = <T,>(
+export const useIndexedDbStore = <T,>(
   key: string,
-  { schema }: IndexedDbStateParams = {}
-): IndexedDbState<T> => {
+  { schema }: IndexedDbStoreParams = {}
+): IndexedDbStore<T> => {
   // States.
   const [values, setValues] = useState<Record<string, T>>({});
 
