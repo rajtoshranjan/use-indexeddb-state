@@ -1,4 +1,4 @@
-# use-indexeddb-state
+# use-idb-store
 
 A React state hook that syncs state to IndexedDB for persistent, offline-friendly, and large-scale data storage.
 

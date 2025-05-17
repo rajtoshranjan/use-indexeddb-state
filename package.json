@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rajtoshranjan/use-indexeddb-state.git"
+    "url": "git+https://github.com/rajtoshranjan/use-idb-store.git"
   },
   "keywords": [
     "react",
@@ -34,9 +34,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rajtoshranjan/use-indexeddb-state/issues"
+    "url": "https://github.com/rajtoshranjan/use-idb-store/issues"
   },
-  "homepage": "https://github.com/rajtoshranjan/use-indexeddb-state#readme",
+  "homepage": "https://github.com/rajtoshranjan/use-idb-store#readme",
   "sideEffects": false,
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",

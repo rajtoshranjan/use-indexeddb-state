@@ -6,7 +6,7 @@ export class DB {
 
   private async getOrCreateIndexedDB(): Promise<IDBDatabase> {
     if (!this.indexedDB) {
-      const request = indexedDB.open("use-indexeddb-state", 1);
+      const request = indexedDB.open("use-idb-store", 1);
       this.indexedDB = await idbRequestToPromise<IDBDatabase>(request);
     }
 
