@@ -1,0 +1,31 @@
+{
+  "name": "use-indexeddb-state",
+  "version": "0.0.1-alpha.0",
+  "description": "A React state hook that syncs state to IndexedDB for persistent, offline-friendly, and large-scale data storage.",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rajtoshranjan/use-indexeddb-state.git"
+  },
+  "keywords": [
+    "react",
+    "indexeddb",
+    "typescript",
+    "react-state"
+  ],
+  "author": {
+    "name": "Rajtosh Ranjan",
+    "url": "https://github.com/rajtoshranjan"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rajtoshranjan/use-indexeddb-state/issues"
+  },
+  "homepage": "https://github.com/rajtoshranjan/use-indexeddb-state#readme"
+}
