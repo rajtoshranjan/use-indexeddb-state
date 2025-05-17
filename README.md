@@ -5,9 +5,7 @@ A React state hook that syncs state to IndexedDB for persistent, offline-friendl
 ## Installation
 
 ```bash
-npm install use-indexeddb-state
-# or
-yarn add use-indexeddb-state
+npm install use-idb-store
 ```
 
 ## Features
