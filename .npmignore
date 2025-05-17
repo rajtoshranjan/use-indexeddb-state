@@ -1,0 +1,24 @@
+# Source
+src/
+
+# Config files
+.gitignore
+tsconfig.json
+rollup.config.js
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Development
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Git
+.git/ 
