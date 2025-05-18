@@ -17,7 +17,7 @@ A React hook that provides persistent state management using IndexedDB, offering
 - 🧩 **Zero Dependencies:** Lightweight with no external dependencies
 
 ## Demo
- - [![TODO App](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/p/sandbox/ld66h7)
+ - [TODO App](https://codesandbox.io/p/sandbox/ld66h7)
 
 ## Installation
 
