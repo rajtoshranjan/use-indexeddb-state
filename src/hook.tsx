@@ -57,7 +57,7 @@ export const useIndexedDbStore = <T,>(
     if (!storeRef.current) return;
 
     try {
-      await storeRef.current.setItem(id, value);
+      await storeRef.current.addItem(id, value);
       setValues((prev) => ({ ...prev, [id]: value }));
     } catch (err) {
       console.error(`Error setting value for ID ${id}:`, err);
@@ -80,5 +80,22 @@ export const useIndexedDbStore = <T,>(
     }
   };
 
-  return { values, setValue, deleteValue, isLoading, error };
+  const updateValue = async (id: string, value: T) => {
+    if (!storeRef.current) return;
+    try {
+      await storeRef.current.updateItem(id, value);
+      setValues((prev) => ({ ...prev, [id]: value }));
+    } catch (err) {
+      console.error(`Error updating value for ID ${id}:`, err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  };
+
+  const mutations = {
+    setValue,
+    deleteValue,
+    updateValue,
+  };
+
+  return { values, mutations, isLoading, error };
 };

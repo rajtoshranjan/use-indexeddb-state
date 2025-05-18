@@ -60,28 +60,46 @@ export class Store<T = any> {
   async getAllItems(): Promise<Record<string, T>> {
     try {
       const store = await this.getStore();
-      const request = store.getAll();
-      const data = await idbRequestToPromise<T[]>(request);
-      return data.reduce((acc, item) => {
-        // @ts-ignore
-        const id = item.id || crypto.randomUUID();
-        // @ts-ignore
-        acc[id] = item;
-        return acc;
-      }, {} as Record<string, T>);
+      const request = store.openCursor();
+      const result: Record<string, T> = {};
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>)
+            .result;
+          if (cursor) {
+            result[cursor.key.toString()] = cursor.value;
+            cursor.continue();
+          } else {
+            resolve(result);
+          }
+        };
+        request.onerror = () => reject(request.error);
+      });
     } catch (error) {
       console.error(`Error getting all items from store ${this.name}:`, error);
       return {};
     }
   }
 
-  async setItem(key: string, value: T): Promise<IDBValidKey> {
+  async addItem(key: string, value: T): Promise<IDBValidKey> {
     try {
       const store = await this.getStore();
       const request = store.put(value, key);
       return idbRequestToPromise<IDBValidKey>(request);
     } catch (error) {
       console.error(`Error setting item ${key} in store ${this.name}:`, error);
+      throw error;
+    }
+  }
+
+  async updateItem(key: string, value: T): Promise<IDBValidKey> {
+    try {
+      const store = await this.getStore();
+      const request = store.put(value, key);
+      return await idbRequestToPromise<IDBValidKey>(request);
+    } catch (error) {
+      console.error(`Error updating item ${key} in store ${this.name}:`, error);
       throw error;
     }
   }
