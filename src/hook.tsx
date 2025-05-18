@@ -1,6 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Store } from "./store";
-import { IndexedDbStore, IndexedDbStoreParams } from "./types";
+import {
+  IndexedDbStore,
+  IndexedDbStoreMutations,
+  IndexedDbStoreParams,
+} from "./types";
 
 export const useIndexedDbStore = <T,>(
   name: string,
@@ -53,7 +57,12 @@ export const useIndexedDbStore = <T,>(
   }, [name]); // Re-run if store name changes
 
   // Handlers.
-  const setValue = async (id: string, value: T) => {
+  const getValue = async (id: string) => {
+    if (!storeRef.current) return null;
+    return storeRef.current.getItem(id) ?? values[id] ?? null;
+  };
+
+  const addValue = async (id: string, value: T) => {
     if (!storeRef.current) return;
 
     try {
@@ -80,19 +89,32 @@ export const useIndexedDbStore = <T,>(
     }
   };
 
-  const updateValue = async (id: string, value: T) => {
+  const updateValue = async (id: string, value: Partial<T>) => {
     if (!storeRef.current) return;
     try {
       await storeRef.current.updateItem(id, value);
-      setValues((prev) => ({ ...prev, [id]: value }));
+      setValues((prev) => ({ ...prev, [id]: { ...prev[id], ...value } }));
     } catch (err) {
       console.error(`Error updating value for ID ${id}:`, err);
       setError(err instanceof Error ? err : new Error(String(err)));
     }
   };
 
-  const mutations = {
-    setValue,
+  const addOrUpdateValue = async (id: string, value: T) => {
+    if (!storeRef.current) return;
+    try {
+      await storeRef.current.addOrUpdateItem(id, value);
+      setValues((prev) => ({ ...prev, [id]: value }));
+    } catch (err) {
+      console.error(`Error adding or updating value for ID ${id}:`, err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  };
+
+  const mutations: IndexedDbStoreMutations<T> = {
+    getValue,
+    addValue,
+    addOrUpdateValue,
     deleteValue,
     updateValue,
   };

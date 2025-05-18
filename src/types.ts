@@ -1,7 +1,9 @@
 export type IndexedDbStoreMutations<T> = {
-  setValue: (id: string, value: T) => Promise<void>;
+  getValue: (id: string) => Promise<T | null>;
+  addValue: (id: string, value: T) => Promise<void>;
   deleteValue: (id: string) => Promise<void>;
-  updateValue: (id: string, value: T) => Promise<void>;
+  updateValue: (id: string, value: Partial<T>) => Promise<void>;
+  addOrUpdateValue: (id: string, value: T) => Promise<void>;
 };
 
 export type IndexedDbStore<T> = {

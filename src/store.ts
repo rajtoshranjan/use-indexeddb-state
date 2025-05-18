@@ -85,7 +85,7 @@ export class Store<T = any> {
   async addItem(key: string, value: T): Promise<IDBValidKey> {
     try {
       const store = await this.getStore();
-      const request = store.put(value, key);
+      const request = store.add(value, key);
       return idbRequestToPromise<IDBValidKey>(request);
     } catch (error) {
       console.error(`Error setting item ${key} in store ${this.name}:`, error);
@@ -93,11 +93,45 @@ export class Store<T = any> {
     }
   }
 
-  async updateItem(key: string, value: T): Promise<IDBValidKey> {
+  async addOrUpdateItem(key: string, value: T): Promise<IDBValidKey> {
     try {
       const store = await this.getStore();
       const request = store.put(value, key);
       return await idbRequestToPromise<IDBValidKey>(request);
+    } catch (error) {
+      console.error(
+        `Error adding or updating item ${key} in store ${this.name}:`,
+        error
+      );
+      throw error;
+    }
+  }
+  async updateItem(key: string, value: Partial<T>): Promise<IDBValidKey> {
+    try {
+      const store = await this.getStore();
+      const request = store.openCursor(key);
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>)
+            .result;
+
+          if (cursor) {
+            const existingItem = cursor.value as T;
+            const updatedItem = { ...existingItem, ...value };
+
+            const updateRequest = cursor.update(updatedItem);
+            updateRequest.onsuccess = () => resolve(key);
+            updateRequest.onerror = () => reject(updateRequest.error);
+          } else {
+            reject(
+              new Error(`Item with key ${key} not found in store ${this.name}`)
+            );
+          }
+        };
+
+        request.onerror = () => reject(request.error);
+      });
     } catch (error) {
       console.error(`Error updating item ${key} in store ${this.name}:`, error);
       throw error;
