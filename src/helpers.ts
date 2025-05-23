@@ -10,7 +10,20 @@ export async function idbRequestToPromise<T>(request: IDBRequest): Promise<T> {
       resolve(request.result);
     });
     request.addEventListener("error", (event: Event) => {
-      reject(event);
+      // Extract more detailed error information
+      const target = event.target as IDBRequest;
+      const error = target.error;
+
+      if (error) {
+        const detailedError = new Error(
+          `IndexedDB Error: ${error.name} - ${error.message}`
+        );
+        (detailedError as any).originalError = error;
+        (detailedError as any).event = event;
+        reject(detailedError);
+      } else {
+        reject(new Error("IndexedDB operation failed with unknown error"));
+      }
     });
   });
 }

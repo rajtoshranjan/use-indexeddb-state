@@ -16,3 +16,7 @@ export type IndexedDbStore<T> = {
 export type IndexedDbStoreParams = {
   schema?: IDBObjectStoreParameters;
 };
+
+export type StoreEvent = "change" | "error";
+
+export type StoreEventCallback = (event: CustomEvent) => void;

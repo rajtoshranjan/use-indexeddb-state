@@ -11,55 +11,55 @@ export const useIndexedDbStore = <T,>(
   { schema }: IndexedDbStoreParams = {}
 ): IndexedDbStore<T> => {
   // States.
-  const [values, setValues] = useState<Record<string, T>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  // HACK: Force update to trigger re-render.
+  const [, forceUpdate] = useState({});
 
-  // Use a ref for the store to avoid recreating it on every render
+  // Refs.
+  const valuesRef = useRef<Record<string, T>>({});
   const storeRef = useRef<Store<T> | null>(null);
+  const isLoadingRef = useRef(true);
+  const errorRef = useRef<Error | null>(null);
 
-  // Initialize the store only once
-  if (!storeRef.current) {
-    storeRef.current = new Store<T>(name, schema);
-  }
-
-  // Load data on component mount
+  // useEffect.
   useEffect(() => {
-    let isMounted = true;
+    if (storeRef.current) return;
+
+    storeRef.current = Store.getInstance<T>(name, schema);
 
     const loadData = async () => {
       try {
         if (!storeRef.current) return;
 
-        setIsLoading(true);
-        setError(null);
+        isLoadingRef.current = true;
+        errorRef.current = null;
 
         const data = await storeRef.current.getAllItems();
 
-        if (isMounted) {
-          setValues(data);
-          setIsLoading(false);
-        }
+        valuesRef.current = data;
+        isLoadingRef.current = false;
       } catch (err) {
         console.error("Error loading indexed DB data:", err);
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setIsLoading(false);
-        }
+        errorRef.current = err instanceof Error ? err : new Error(String(err));
+        isLoadingRef.current = false;
       }
+      forceUpdate({});
     };
 
+    // Initial load.
     loadData();
 
+    storeRef.current.on("change", loadData);
+
     return () => {
-      isMounted = false;
+      // HACK: This is not working.
+      // storeRef.current?.off("change", loadData);
     };
-  }, [name]); // Re-run if store name changes
+  }, []);
 
   // Handlers.
   const getValue = async (id: string) => {
     if (!storeRef.current) return null;
-    return storeRef.current.getItem(id) ?? values[id] ?? null;
+    return storeRef.current.getItem(id) ?? valuesRef.current[id] ?? null;
   };
 
   const addValue = async (id: string, value: T) => {
@@ -67,10 +67,10 @@ export const useIndexedDbStore = <T,>(
 
     try {
       await storeRef.current.addItem(id, value);
-      setValues((prev) => ({ ...prev, [id]: value }));
+      // setValues((prev) => ({ ...prev, [id]: value }));
     } catch (err) {
       console.error(`Error setting value for ID ${id}:`, err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      errorRef.current = err instanceof Error ? err : new Error(String(err));
     }
   };
 
@@ -79,13 +79,9 @@ export const useIndexedDbStore = <T,>(
 
     try {
       await storeRef.current.deleteItem(id);
-      setValues((prev) => {
-        const { [id]: _, ...rest } = prev;
-        return rest;
-      });
     } catch (err) {
       console.error(`Error deleting value for ID ${id}:`, err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      errorRef.current = err instanceof Error ? err : new Error(String(err));
     }
   };
 
@@ -93,10 +89,9 @@ export const useIndexedDbStore = <T,>(
     if (!storeRef.current) return;
     try {
       await storeRef.current.updateItem(id, value);
-      setValues((prev) => ({ ...prev, [id]: { ...prev[id], ...value } }));
     } catch (err) {
       console.error(`Error updating value for ID ${id}:`, err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      errorRef.current = err instanceof Error ? err : new Error(String(err));
     }
   };
 
@@ -104,10 +99,9 @@ export const useIndexedDbStore = <T,>(
     if (!storeRef.current) return;
     try {
       await storeRef.current.addOrUpdateItem(id, value);
-      setValues((prev) => ({ ...prev, [id]: value }));
     } catch (err) {
       console.error(`Error adding or updating value for ID ${id}:`, err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      errorRef.current = err instanceof Error ? err : new Error(String(err));
     }
   };
 
@@ -119,5 +113,10 @@ export const useIndexedDbStore = <T,>(
     updateValue,
   };
 
-  return { values, mutations, isLoading, error };
+  return {
+    values: valuesRef.current,
+    mutations,
+    isLoading: isLoadingRef.current,
+    error: errorRef.current,
+  };
 };

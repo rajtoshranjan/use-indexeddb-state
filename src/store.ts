@@ -1,19 +1,34 @@
 import { DB } from "./db";
 import { idbRequestToPromise } from "./helpers";
+import { StoreEvent, StoreEventCallback } from "./types";
 
 export class Store<T = any> {
+  private static instance: Record<string, Store<any>> = {};
   protected name: string;
   private db: DB;
   private schema?: IDBObjectStoreParameters;
   private isInitialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private eventListeners: Record<StoreEvent, StoreEventCallback[]> = {
+    change: [],
+    error: [],
+  };
 
-  constructor(name: string, schema?: IDBObjectStoreParameters) {
+  private constructor(name: string, schema?: IDBObjectStoreParameters) {
     this.db = DB.getInstance();
     this.name = name;
     this.schema = schema;
-    // Start setup immediately but don't wait for it
     this.initPromise = this.setup();
+  }
+
+  public static getInstance<T>(
+    name: string,
+    schema?: IDBObjectStoreParameters
+  ): Store<T> {
+    if (!Store.instance[name]) {
+      Store.instance[name] = new Store<T>(name, schema);
+    }
+    return Store.instance[name] as Store<T>;
   }
 
   async setup() {
@@ -26,7 +41,6 @@ export class Store<T = any> {
     }
   }
 
-  // Ensure the store is initialized before any operations
   private async ensureInitialized() {
     if (!this.isInitialized) {
       if (this.initPromise) {
@@ -53,6 +67,7 @@ export class Store<T = any> {
         `Error getting item ${key} from store ${this.name}:`,
         error
       );
+      this.emit("error", error);
       return null;
     }
   }
@@ -78,6 +93,7 @@ export class Store<T = any> {
       });
     } catch (error) {
       console.error(`Error getting all items from store ${this.name}:`, error);
+      this.emit("error", error);
       return {};
     }
   }
@@ -86,9 +102,12 @@ export class Store<T = any> {
     try {
       const store = await this.getStore();
       const request = store.add(value, key);
-      return idbRequestToPromise<IDBValidKey>(request);
+      const result = await idbRequestToPromise<IDBValidKey>(request);
+      this.emit("change", { add: { key, value } });
+      return result;
     } catch (error) {
       console.error(`Error setting item ${key} in store ${this.name}:`, error);
+      this.emit("error", error);
       throw error;
     }
   }
@@ -97,7 +116,9 @@ export class Store<T = any> {
     try {
       const store = await this.getStore();
       const request = store.put(value, key);
-      return await idbRequestToPromise<IDBValidKey>(request);
+      const result = await idbRequestToPromise<IDBValidKey>(request);
+      this.emit("change", { addOrUpdate: { key, value } });
+      return result;
     } catch (error) {
       console.error(
         `Error adding or updating item ${key} in store ${this.name}:`,
@@ -121,10 +142,20 @@ export class Store<T = any> {
             const updatedItem = { ...existingItem, ...value };
 
             const updateRequest = cursor.update(updatedItem);
-            updateRequest.onsuccess = () => resolve(key);
-            updateRequest.onerror = () => reject(updateRequest.error);
+            updateRequest.onsuccess = () => {
+              resolve(key);
+              this.emit("change", { update: key });
+            };
+            updateRequest.onerror = () => {
+              reject(updateRequest.error);
+              this.emit("error", updateRequest.error);
+            };
           } else {
             reject(
+              new Error(`Item with key ${key} not found in store ${this.name}`)
+            );
+            this.emit(
+              "error",
               new Error(`Item with key ${key} not found in store ${this.name}`)
             );
           }
@@ -134,6 +165,7 @@ export class Store<T = any> {
       });
     } catch (error) {
       console.error(`Error updating item ${key} in store ${this.name}:`, error);
+      this.emit("error", error);
       throw error;
     }
   }
@@ -143,30 +175,72 @@ export class Store<T = any> {
       const store = await this.getStore();
       const request = store.delete(key);
       await idbRequestToPromise<void>(request);
+      this.emit("change", { delete: { key } });
     } catch (error) {
       console.error(
         `Error deleting item ${key} from store ${this.name}:`,
         error
       );
+      this.emit("error", error);
       throw error;
     }
   }
 
+  /**
+   * Emits an event to all registered listeners for a specific event type
+   * @param event - The type of event to emit ('change' or 'error')
+   * @param data - The data to emit with the event
+   */
+  emit(event: StoreEvent, data: any) {
+    const listeners = this.eventListeners[event];
+    if (listeners && listeners.length > 0) {
+      // Create a custom event with the data
+      const customEvent = new CustomEvent(event, { detail: data });
+      listeners.forEach((callback) => callback(customEvent));
+    }
+  }
+
+  /**
+   * Registers an event listener for the specified store event
+   */
+  on(event: StoreEvent, callback: StoreEventCallback) {
+    this.eventListeners[event].push(callback);
+  }
+
+  /**
+   * Removes an event listener from the store
+   */
+  off(event: StoreEvent, callback: StoreEventCallback) {
+    this.eventListeners[event] = this.eventListeners[event].filter(
+      (listener) => listener !== callback
+    );
+  }
+
+  /**
+   * Clears all items from the store.
+   */
   async clear() {
     try {
       const store = await this.getStore();
       store.clear();
+      this.emit("change", { clear: true });
     } catch (error) {
       console.error(`Error clearing store ${this.name}:`, error);
+      this.emit("error", error);
       throw error;
     }
   }
 
+  /**
+   * Destroys the store and deletes it from the database.
+   */
   async destroy() {
     try {
       await this.db.deleteStore(this.name);
+      this.emit("change", { destroy: true });
     } catch (error) {
       console.error(`Error destroying store ${this.name}:`, error);
+      this.emit("error", error);
       throw error;
     }
   }
