@@ -15,6 +15,7 @@ A React hook that provides persistent state management using IndexedDB, offering
 - 🛠️ **TypeScript Ready:** Full type safety with generics support
 - 🏗️ **Robust Error Handling:** Gracefully handles edge cases
 - 🧩 **Zero Dependencies:** Lightweight with no external dependencies
+- 🌐 **Global Store Behavior:** When you use the same store name across different components, they all share the same store instance and data
 
 ## Demo
 
@@ -143,6 +144,109 @@ mutations.addValue("user1", {
   email: "john@example.com",
   age: 30,
 });
+```
+
+### Global Store Behavior
+
+One of the most powerful features of `use-idb-store` is its **automatic global store behavior**. When you use the same store name across different components, they all share the same store instance and data. This eliminates the need for prop drilling or React Context for shared state.
+
+#### How It Works
+
+```jsx
+// Component A
+function TodoList() {
+  const { values: todos, mutations } = useIndexedDbStore("todos");
+
+  return (
+    <div>
+      <h2>Todo List ({Object.keys(todos).length} items)</h2>
+      {Object.values(todos).map((todo) => (
+        <div key={todo.id}>{todo.text}</div>
+      ))}
+    </div>
+  );
+}
+
+// Component B (completely separate)
+function TodoForm() {
+  const { mutations } = useIndexedDbStore("todos"); // Same store name!
+
+  const addTodo = () => {
+    const id = Date.now().toString();
+    mutations.addValue(id, {
+      id,
+      text: "New todo from form",
+      completed: false,
+    });
+  };
+
+  return <button onClick={addTodo}>Add Todo</button>;
+}
+
+// Component C (in a different part of your app)
+function TodoStats() {
+  const { values: todos } = useIndexedDbStore("todos"); // Same store again!
+
+  const completedCount = Object.values(todos).filter(
+    (todo) => todo.completed
+  ).length;
+
+  return <p>Completed: {completedCount}</p>;
+}
+```
+
+#### Key Benefits
+
+- **🌐 Global State**: No need for Context providers or prop drilling
+- **🔄 Real-time Sync**: Changes in one component instantly reflect in all others
+- **💾 Persistent**: Data persists across page reloads and browser sessions
+- **🎯 Isolated**: Different store names remain completely separate
+
+#### Multiple Stores Example
+
+You can use multiple independent stores throughout your application:
+
+```jsx
+function UserProfile() {
+  const { values: users } = useIndexedDbStore("users");
+  const { values: settings } = useIndexedDbStore("settings");
+  const { values: todos } = useIndexedDbStore("todos");
+
+  // Each store is independent but globally accessible
+  return (
+    <div>
+      <h1>Welcome {users.currentUser?.name}</h1>
+      <p>Theme: {settings.theme}</p>
+      <p>Pending todos: {Object.keys(todos).length}</p>
+    </div>
+  );
+}
+
+function SettingsPanel() {
+  const { mutations } = useIndexedDbStore("settings"); // Same settings store
+
+  const toggleTheme = () => {
+    mutations.updateValue("theme", { value: "dark" });
+  };
+
+  return <button onClick={toggleTheme}>Toggle Theme</button>;
+}
+```
+
+#### Best Practices
+
+1. **Consistent Naming**: Use descriptive, consistent store names across your app
+2. **Type Definitions**: Define TypeScript interfaces for better development experience
+3. **Store Separation**: Keep different data types in separate stores for better organization
+
+```tsx
+// Good: Organized by data type
+const { values: users } = useIndexedDbStore<User>("users");
+const { values: todos } = useIndexedDbStore<Todo>("todos");
+const { values: settings } = useIndexedDbStore<Settings>("app-settings");
+
+// Avoid: Mixing unrelated data in one store
+const { values: mixedData } = useIndexedDbStore("everything"); // Not recommended
 ```
 
 ### Error Handling
